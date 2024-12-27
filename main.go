@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"html/template"
 	"net/http"
+	"personal-site/html"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -22,7 +23,7 @@ func main() {
 	r.Use(middleware.Recoverer) // recover and log from panic, return 500
 	r.Use(middleware.RealIP)    // add request RemoteAddr to X-Real-IP
 
-	// TODO: connect to db
+	// TODO: setup and connect to db
 
 	r.Get("/", GetHomePage)
 	err := http.ListenAndServe(":3000", r)
@@ -32,9 +33,5 @@ func main() {
 }
 
 func GetHomePage(w http.ResponseWriter, r *http.Request) {
-	t, _ := template.ParseFiles("templates/index.html")
-	err := t.Execute(w, "")
-	if err != nil {
-		panic(err)
-	}
+	html.Home(w)
 }
