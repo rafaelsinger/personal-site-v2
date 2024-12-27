@@ -1,16 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- TODO: add more meta tags for social media -->
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>
       {{block "title" .}}{{end}}
     </title>
+    <link rel="stylesheet" href="../css/layout.css">
   </head>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <body>
-    <div class="content">
+    <header>
+      <nav class="nav-bar">
+        <a href="/">Home</a>
+        <a href="/blog">Blog</a>
+      </nav>
+    </header>
+    <main class="content">
       {{block "content" .}}{{end}}
-    </div>
+    </main>
   </body>
 </html>
