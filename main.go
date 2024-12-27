@@ -48,6 +48,10 @@ func main() {
 		// list of directories to recursively watch
 		reloader := reload.New("html/", "css/")
 		handler = reloader.Handle(handler)
+		r.Handle("/css/*", http.StripPrefix("/css/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "no-store, must-revalidate")
+			http.FileServer(http.Dir("./css")).ServeHTTP(w, r)
+		})))
 	}
 
 	// TODO: setup and connect to db
