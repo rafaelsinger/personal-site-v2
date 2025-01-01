@@ -1,16 +1,51 @@
 * {
     box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
 }
 
 :root {
-    --bg-color: #B7E4C7;
+    --bg-color: #0c3737;
+    --link-color: #73a0b0;
+    --font-color: #F8F0E3;
 }
 
 body {
+    display: flex;
+    justify-content: center;
+    padding: 15px;
     height: 100vh;
-    background-color: var(--bg-color)
+    background-color: var(--bg-color);
+    color: var(--font-color)
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; 
+    text-align: left;
+    max-width: 80vw;
+    word-wrap: break-word;
+}
+
+.content {
+    max-width: 100%;
+}
+
+a {
+    color: var(--link-color);
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
 }
 
 .nav-bar {
-    font-size: 32px;
+    justify-content: left;
+    font-size: 20px;
+}
+
+.nav-bar a {
+    margin-right: 15px
 }
