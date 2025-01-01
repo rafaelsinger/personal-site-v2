@@ -14,8 +14,8 @@
 body {
     display: flex;
     justify-content: center;
-    padding: 15px;
     height: 100vh;
+    margin: 0;
     background-color: var(--bg-color);
     color: var(--font-color)
 }
@@ -24,6 +24,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: flex-start; 
+    padding: 15px;
     text-align: left;
     max-width: 80vw;
     word-wrap: break-word;
