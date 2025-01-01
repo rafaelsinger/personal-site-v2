@@ -54,11 +54,21 @@ func main() {
 		})))
 	}
 
-	// TODO: setup and connect to db
+	db, err := Connect()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	pingErr := db.Ping()
+	if pingErr != nil {
+		log.Fatal(pingErr)
+	}
+	fmt.Println("Connected!")
 
 	r.Get("/", GetHomePage)
 
-	err := http.ListenAndServe(port, handler)
+	err = http.ListenAndServe(port, handler)
 	if err != nil {
 		panic(err)
 	}
