@@ -32,7 +32,6 @@ func init() {
 	isDev = os.Getenv("GO_ENV") == "development"
 	addr = os.Getenv("SERVER_ADDR")
 	port = fmt.Sprintf(":%s", os.Getenv("SERVER_PORT"))
-
 }
 
 func main() {
@@ -67,6 +66,8 @@ func main() {
 	fmt.Println("Connected!")
 
 	r.Get("/", GetHomePage)
+	r.Get("/admin", GetAdminPage)
+	r.Post("/admin", HandleAdminLogin)
 
 	err = http.ListenAndServe(port, handler)
 	if err != nil {
@@ -77,4 +78,37 @@ func main() {
 
 func GetHomePage(w http.ResponseWriter, r *http.Request) {
 	html.Home(w)
+}
+
+func GetAdminPage(w http.ResponseWriter, r *http.Request) {
+	html.Admin(w)
+}
+
+func HandleAdminLogin(w http.ResponseWriter, r *http.Request) {
+	// request validation
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	user, pass := r.FormValue("username"), r.FormValue("password")
+	if user == "" || pass == "" {
+		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+
+	var is_admin bool
+	row := db.QueryRow("SELECT is_admin FROM user WHERE username = ? AND password = ?", user, pass)
+	err = row.Scan(&is_admin)
+	fmt.Println(err, is_admin)
+	if err == sql.ErrNoRows || !is_admin {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	//TODO: sent some sort of cookie over (make this authentication more robust)
+
+	fmt.Fprint(w, "success")
 }

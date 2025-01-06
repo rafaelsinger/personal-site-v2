@@ -19,7 +19,7 @@ func parse(file string) *template.Template {
 	if is_dev {
 		// dynamically read from files for dynamic template parsing
 		return template.Must(
-			template.New("layout.html").ParseFiles("html/layout.html", file))
+			template.New("layout.html").ParseFiles("layout.html", file))
 	} else {
 		// read from embedded file system in production
 		return template.Must(
@@ -28,5 +28,9 @@ func parse(file string) *template.Template {
 }
 
 func Home(w io.Writer) error {
-	return parse("html/home.html").Execute(w, "")
+	return parse("home.html").Execute(w, "")
+}
+
+func Admin(w io.Writer) error {
+	return parse("admin.html").Execute(w, "")
 }
