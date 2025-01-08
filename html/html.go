@@ -31,6 +31,6 @@ func Home(w io.Writer) error {
 	return parse("home.html").Execute(w, "")
 }
 
-func Admin(w io.Writer) error {
-	return parse("admin.html").Execute(w, "")
+func Login(w io.Writer) error {
+	return parse("login.html").Execute(w, "")
 }
