@@ -1,0 +1,8 @@
+.post-text {
+    display: flex;
+}
+
+.raw-post, .preview-post {
+    width: 500px;
+    height: 800px;
+}

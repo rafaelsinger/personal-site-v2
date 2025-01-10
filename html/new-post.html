@@ -2,6 +2,15 @@
 
 {{define "content"}}
 <section class="new-post">
-    <h1>woo hoo create a new post here</h1>
+    <section class="post-text">
+        <h2 id="raw-post-title">Raw</h2>
+        <textarea class="raw-post"></textarea>
+        <h2 id="preview-post-title">Preview</h2>
+        <textarea class="preview-post"></textarea>
+    </section>
+    <form enctype="multipart/form-data" hx-post="/upload-markdown" hx-target=".post-text" hx-swap="outerHTML">
+        <input type="file" name="markdown">
+        <input type="submit" value="Upload Markdown"></button>
+    </form>
 </section>
 {{end}}

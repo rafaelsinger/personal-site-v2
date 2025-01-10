@@ -1,10 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"personal-site/html"
 	"personal-site/utils/markdown"
@@ -84,6 +85,7 @@ func main() {
 
 		r.Get("/admin", GetAdminPage)
 		r.Get("/new-post", GetNewPost)
+		r.Post("/upload-markdown", HandleUploadMarkdown)
 	})
 
 	// public routes
@@ -91,7 +93,6 @@ func main() {
 		r.Get("/", GetHomePage)
 		r.Get("/login", GetLoginPage)
 		r.Post("/login", HandleLogin)
-		r.Post("/markdown", HandleMarkdown)
 	})
 
 	err = http.ListenAndServe(port, handler)
@@ -171,14 +172,20 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-type Markdown struct {
-	Content string `json:"content"`
-}
-
-func HandleMarkdown(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	var t Markdown
-	decoder.Decode(&t)
-	fmt.Println(markdown.ParseMD(t.Content))
+func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
+	r.ParseMultipartForm(32 << 20)
+	var buf bytes.Buffer
+	file, _, err := r.FormFile("markdown")
+	if err != nil {
+		http.Error(w, "Failed to retrieve file", http.StatusBadRequest)
+	}
+	defer file.Close()
+	io.Copy(&buf, file)
+	contents := buf.String()
+	mk, err := markdown.ParseMD(contents)
+	if err != nil {
+		http.Error(w, "Error parsing markdown", http.StatusBadRequest)
+	}
+	res := fmt.Sprintf(`<textarea class="post-text">%s</textarea>`, mk)
+	w.Write([]byte(res))
 }
