@@ -22,7 +22,7 @@ func Connect() (*sql.DB, error) {
 	return db, nil
 }
 
-// TODO: think about security
+// TODO: think about security (don't store passwords as plaintext)
 func initialize(*sql.DB) error {
 	user, pass := os.Getenv("ADMIN_USER"), os.Getenv("ADMIN_PASS")
 	stmt := `

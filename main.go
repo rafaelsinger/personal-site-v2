@@ -2,10 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
 	"personal-site/html"
+	"personal-site/utils/markdown"
 	"time"
 
 	"log"
@@ -81,6 +83,7 @@ func main() {
 		r.Use(jwtauth.Authenticator(tokenAuth))
 
 		r.Get("/admin", GetAdminPage)
+		r.Get("/new-post", GetNewPost)
 	})
 
 	// public routes
@@ -88,6 +91,7 @@ func main() {
 		r.Get("/", GetHomePage)
 		r.Get("/login", GetLoginPage)
 		r.Post("/login", HandleLogin)
+		r.Post("/markdown", HandleMarkdown)
 	})
 
 	err = http.ListenAndServe(port, handler)
@@ -106,7 +110,11 @@ func GetLoginPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAdminPage(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("you're in the admin page woohoo"))
+	html.Admin(w)
+}
+
+func GetNewPost(w http.ResponseWriter, r *http.Request) {
+	html.NewPost(w)
 }
 
 func generateToken() (string, error) {
@@ -159,6 +167,18 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	})
 
+	w.Header().Set("HX-Redirect", "/admin")
 	w.WriteHeader(http.StatusOK)
-	http.Get("/admin") // TODO: make this actually route to admin
+}
+
+type Markdown struct {
+	Content string `json:"content"`
+}
+
+func HandleMarkdown(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	var t Markdown
+	decoder.Decode(&t)
+	fmt.Println(markdown.ParseMD(t.Content))
 }

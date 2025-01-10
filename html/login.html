@@ -1,13 +1,13 @@
-{{define "title"}}Admin Panel{{end}}
+{{define "title"}}Login{{end}}
 
 {{define "content"}}
-<section class="admin-content">
+<section class="login">
     <form>
         <label for="username">Username</label><br>
         <input type="text" name="username"><br>
         <label for="password">Password</label><br>
         <input type="password" name="password">
-        <button hx-post="/login" hx-target=".admin-content" hx-swap="outerHTML">Login</button>
+        <button hx-post="/login">Login</button>
     </form>
 </section>
 {{end}}

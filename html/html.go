@@ -34,3 +34,11 @@ func Home(w io.Writer) error {
 func Login(w io.Writer) error {
 	return parse("login.html").Execute(w, "")
 }
+
+func Admin(w io.Writer) error {
+	return parse("admin.html").Execute(w, "")
+}
+
+func NewPost(w io.Writer) error {
+	return parse("new-post.html").Execute(w, "")
+}
