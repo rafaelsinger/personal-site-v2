@@ -3,14 +3,24 @@
 {{define "content"}}
 <section class="new-post">
     <section class="post-text">
-        <h2 id="raw-post-title">Raw</h2>
-        <textarea class="raw-post"></textarea>
-        <h2 id="preview-post-title">Preview</h2>
-        <textarea class="preview-post"></textarea>
+        <div class="raw-container">
+            <h2 id="raw-post-title">Raw</h2>
+            <textarea class="raw-post" oninput={previewPost(this.value)}></textarea>
+        </div>
+        <div class="preview-container">
+            <h2 id="preview-post-title">Preview</h2>
+            <div class="preview-post"></div>
+        </div>
     </section>
-    <form enctype="multipart/form-data" hx-post="/upload-markdown" hx-target=".post-text" hx-swap="outerHTML">
+    <form enctype="multipart/form-data" hx-post="/upload-markdown" hx-target=".raw-post" hx-swap="innerHTML">
         <input type="file" name="markdown">
         <input type="submit" value="Upload Markdown"></button>
     </form>
 </section>
+<script>
+    function previewPost(value) {
+        preview = document.querySelector('.preview-post')
+        preview.innerHTML = value
+    }
+</script>
 {{end}}

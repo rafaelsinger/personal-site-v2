@@ -7,44 +7,27 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"personal-site/config"
 	"personal-site/html"
 	"personal-site/utils/markdown"
 	"time"
 
 	"log"
-	"os"
 
 	"github.com/aarol/reload"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/joho/godotenv"
 )
 
 var db *sql.DB
-var isDev bool
-var addr string
-var port string
-var signKey []byte
-var tokenAuth *jwtauth.JWTAuth
 
 type Template struct {
 	Content template.HTML `json:"content"`
 }
 
 // TODO: modularize this code better instead of having everything in main
-
-func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
-	}
-	isDev = os.Getenv("GO_ENV") == "development"
-	addr = os.Getenv("SERVER_ADDR")
-	port = fmt.Sprintf(":%s", os.Getenv("SERVER_PORT"))
-	signKey = []byte(os.Getenv("SIGN_KEY"))
-	tokenAuth = jwtauth.New("HS256", signKey, nil)
-}
 
 func main() {
 	r := chi.NewRouter()
@@ -55,7 +38,7 @@ func main() {
 
 	var handler http.Handler = r
 
-	if isDev {
+	if config.IsDev {
 		// list of directories to recursively watch
 		reloader := reload.New("html/", "css/", "assets/")
 		handler = reloader.Handle(handler)
@@ -80,8 +63,8 @@ func main() {
 	// protected routes
 	r.Group(func(r chi.Router) {
 		// TODO: more graceful Forbidden page when receiving 401
-		r.Use(jwtauth.Verifier(tokenAuth))
-		r.Use(jwtauth.Authenticator(tokenAuth))
+		r.Use(jwtauth.Verifier(config.TokenAuth))
+		r.Use(jwtauth.Authenticator(config.TokenAuth))
 
 		r.Get("/admin", GetAdminPage)
 		r.Get("/new-post", GetNewPost)
@@ -95,11 +78,11 @@ func main() {
 		r.Post("/login", HandleLogin)
 	})
 
-	err = http.ListenAndServe(port, handler)
+	err = http.ListenAndServe(config.Port, handler)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Server running at http://%s%s\n", addr, port)
+	fmt.Printf("Server running at http://%s%s\n", config.Addr, config.Port)
 }
 
 func GetHomePage(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +106,7 @@ func generateToken() (string, error) {
 		"admin": true,
 		"exp":   time.Now().Add(time.Hour * 24).Unix(),
 	})
-	s, err := t.SignedString(signKey)
+	s, err := t.SignedString(config.SignKey)
 	if err != nil {
 		return "", err
 	}
@@ -164,7 +147,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Name:     "jwt",
 		Value:    jwt,
 		HttpOnly: true,
-		Secure:   !isDev,
+		Secure:   !config.IsDev,
 		Path:     "/",
 	})
 
@@ -186,6 +169,7 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Error parsing markdown", http.StatusBadRequest)
 	}
-	res := fmt.Sprintf(`<textarea class="post-text">%s</textarea>`, mk)
-	w.Write([]byte(res))
+	// res := fmt.Sprintf(`<textarea class="raw-post">%s</textarea>`, mk)
+	// TODO: fix this so that we can set the inner HTML without having to replace the whole textarea element
+	w.Write([]byte(mk))
 }
