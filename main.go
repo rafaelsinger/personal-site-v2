@@ -69,6 +69,7 @@ func main() {
 		r.Get("/admin", GetAdminPage)
 		r.Get("/new-post", GetNewPost)
 		r.Post("/upload-markdown", HandleUploadMarkdown)
+		r.Post("/create-post", HandleCreatePost)
 	})
 
 	// public routes
@@ -169,7 +170,9 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Error parsing markdown", http.StatusBadRequest)
 	}
-	// res := fmt.Sprintf(`<textarea class="raw-post">%s</textarea>`, mk)
-	// TODO: fix this so that we can set the inner HTML without having to replace the whole textarea element
 	w.Write([]byte(mk))
+}
+
+func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("you made a post woohoo"))
 }

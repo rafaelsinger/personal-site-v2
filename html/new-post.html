@@ -5,22 +5,36 @@
     <section class="post-text">
         <div class="raw-container">
             <h2 id="raw-post-title">Raw</h2>
-            <textarea class="raw-post" oninput={previewPost(this.value)}></textarea>
+            <textarea class="raw-post" oninput={previewPost(this.value)} form="create-post-form"></textarea>
+            <form class="upload-markdown-container" enctype="multipart/form-data" hx-post="/upload-markdown" hx-target=".raw-post" hx-swap="innerHTML">
+                <input type="file" name="markdown">
+                <input type="submit" value="Upload Markdown"></button>
+            </form>
+            <form class="create-post-container" id="create-post-form" method="post" action="/create-post">
+                <!-- TODO: fix why this form is not including the textarea's value in the payload -->
+                <button type="submit">Create Post</button>
+            </form>
         </div>
         <div class="preview-container">
             <h2 id="preview-post-title">Preview</h2>
             <div class="preview-post"></div>
         </div>
     </section>
-    <form enctype="multipart/form-data" hx-post="/upload-markdown" hx-target=".raw-post" hx-swap="innerHTML">
-        <input type="file" name="markdown">
-        <input type="submit" value="Upload Markdown"></button>
-    </form>
 </section>
+<!-- TODO: figure out way to not use JS here to swap value attribute for the raw post textarea -->
 <script>
+    const rawPostElement = document.querySelector(".raw-post")
+    const previewElement = document.querySelector(".preview-post")
+    window.addEventListener("htmx:afterSwap", (e) => {
+      if (e.target !== rawPostElement) {
+        return;
+      }
+      const markdownHTML = e.target.innerHTML
+      rawPostElement.value = markdownHTML
+      previewElement.innerHTML = markdownHTML
+    });
     function previewPost(value) {
-        preview = document.querySelector('.preview-post')
-        preview.innerHTML = value
+        previewElement.innerHTML = value
     }
 </script>
 {{end}}

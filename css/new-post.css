@@ -11,3 +11,14 @@
     margin-left: 10px;
     margin-right: 10px;
 }
+
+.create-post-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-markdown-container {
+    display: flex;
+    justify-content: space-around;
+}
