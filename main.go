@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"html/template"
@@ -11,6 +12,7 @@ import (
 	"personal-site/html"
 	"personal-site/utils/markdown"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +30,22 @@ var db *sql.DB
 type Template struct {
 	Content template.HTML `json:"content"`
 }
+
+type Post struct {
+	id         int
+	user_id    int
+	title      string
+	slug       string
+	contents   string
+	created_at time.Time
+	updated_at time.Time
+}
+
+type key int
+
+const (
+	postKey key = iota
+)
 
 // TODO: modularize this code better instead of having everything in main
 
@@ -78,6 +96,12 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Get("/", GetHomePage)
 		r.Get("/login", GetLoginPage)
+		r.Route("/posts", func(r chi.Router) {
+			// TODO: add pagination
+			// r.Get("/", GetAllPosts)
+			r.With(PostCtx).Get("/{postID}", GetPost)
+			r.With(PostCtx).Get("/postSlug:[a-z-]+", GetPost)
+		})
 		r.Post("/login", HandleLogin)
 	})
 
@@ -86,6 +110,38 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("Server running at http://%s%s\n", config.Addr, config.Port)
+}
+
+// middleware to add post to context, throw 404 if not found
+func PostCtx(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var post *Post
+		var err error
+
+		if postID := chi.URLParam(r, "postID"); postID != "" {
+			postIdInt, err := strconv.Atoi(postID)
+			if err != nil {
+				http.Error(w, "Invalid post ID", http.StatusBadRequest)
+				return
+			}
+			post, err = dbGetPost(postIdInt)
+		} else if postSlug := chi.URLParam(r, "postSlug"); postSlug != "" {
+			post, err = dbGetPostBySlug(postSlug)
+		} else {
+			// TODO: return a 404
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+
+		if err != nil {
+			// TODO: return a 404
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), postKey, post)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func GetHomePage(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +160,16 @@ func GetNewPost(w http.ResponseWriter, r *http.Request) {
 	html.NewPost(w)
 }
 
+func GetPost(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	post, ok := ctx.Value(postKey).(*Post)
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
+	}
+	w.Write([]byte(fmt.Sprintf("title:%s", post.title)))
+}
+
 func generateToken(user_id int) (string, error) {
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"admin":   true,
@@ -115,6 +181,28 @@ func generateToken(user_id int) (string, error) {
 		return "", err
 	}
 	return s, nil
+}
+
+// TODO: move db functionality into db.go
+
+func dbGetPost(post_id int) (*Post, error) {
+	var post Post
+	row := db.QueryRow("SELECT * FROM post WHERE id = ?", post_id)
+	err := row.Scan(&post.id, &post.user_id, &post.title, &post.slug, &post.contents, &post.created_at, &post.updated_at)
+	if err != nil {
+		return nil, err
+	}
+	return &post, nil
+}
+
+func dbGetPostBySlug(slug string) (*Post, error) {
+	var post Post
+	row := db.QueryRow("SELECT * FROM post WHERE slug = ?", slug)
+	err := row.Scan(&post.id, &post.user_id, &post.title, &post.slug, &post.contents, &post.created_at, &post.updated_at)
+	if err != nil {
+		return nil, err
+	}
+	return &post, nil
 }
 
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
@@ -132,6 +220,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	var is_admin bool
 	var user_id int
+	// TODO: move db functionality into db.go
 	row := db.QueryRow("SELECT id, is_admin FROM user WHERE username = ? AND password = ?", user, pass)
 	err = row.Scan(&user_id, &is_admin)
 	if err == sql.ErrNoRows || !is_admin {
@@ -185,9 +274,9 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
                 <input type="submit" value="Upload Markdown"></button>
             </form>
             <label for="post-title">Title</label>
-            <input type="text" name="post-title" value="%s" oninput={previewPostTitle(this.value)}>
+            <input type="text" name="post-title" value="%s" oninput={previewPostTitle(this.value)} form="create-post-form">
             <label for="post-slug">Slug</label>
-            <input type="text" name="post-slug" value="%s">
+            <input type="text" name="post-slug" value="%s" form="create-post-form">
             <form class="create-post-container" id="create-post-form" method="post" action="/create-post">
                 <button type="submit">Create Post</button>
             </form>
@@ -202,7 +291,6 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
 }
 
 func formatTitle(filename string) string {
-	fmt.Println(filename[:len(filename)-3])
 	return filename[:len(filename)-3]
 }
 
@@ -236,9 +324,12 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	claims := token.Claims.(jwt.MapClaims)
 	user_id := int(claims["user_id"].(float64)) // user_id is a float64 in the map and not an int for some reason
 	postContent := r.FormValue("post-content")
+	postTitle := r.FormValue("post-title")
+	postSlug := r.FormValue("post-slug")
+	// TODO: make this actually upload a Post type using the driver.Value interface
 	result, err := db.Exec(
 		"INSERT INTO post (user_id, title, slug, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?);",
-		user_id, "foo", "bar", postContent, time.Now(), time.Now())
+		user_id, postTitle, postSlug, postContent, time.Now(), time.Now())
 	if err != nil {
 		http.Error(w, "Error creating post", http.StatusInternalServerError)
 	}
