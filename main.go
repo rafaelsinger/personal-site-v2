@@ -48,6 +48,7 @@ const (
 )
 
 // TODO: modularize this code better instead of having everything in main
+// TODO: set up delve for better debugging
 
 func main() {
 	r := chi.NewRouter()
@@ -81,8 +82,9 @@ func main() {
 	fmt.Println("Connected!")
 
 	// protected routes
+	// TODO: proper 404 page
 	r.Group(func(r chi.Router) {
-		// TODO: more graceful Forbidden page when receiving 401
+		// TODO: proper Forbidden page when receiving 401
 		r.Use(jwtauth.Verifier(config.TokenAuth))
 		r.Use(jwtauth.Authenticator(config.TokenAuth))
 
@@ -97,10 +99,10 @@ func main() {
 		r.Get("/", GetHomePage)
 		r.Get("/login", GetLoginPage)
 		r.Route("/posts", func(r chi.Router) {
-			// TODO: add pagination
+			// TODO: add pagination (eventually)
 			// r.Get("/", GetAllPosts)
 			r.With(PostCtx).Get("/{postID}", GetPost)
-			r.With(PostCtx).Get("/postSlug:[a-z-]+", GetPost)
+			r.With(PostCtx).Get("/{postSlug:[a-z-]+}", GetPost)
 		})
 		r.Post("/login", HandleLogin)
 	})
@@ -144,6 +146,7 @@ func PostCtx(next http.Handler) http.Handler {
 	})
 }
 
+// TODO: move routes into different file too (?)
 func GetHomePage(w http.ResponseWriter, r *http.Request) {
 	html.Home(w)
 }
@@ -168,6 +171,7 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write([]byte(fmt.Sprintf("title:%s", post.title)))
+	// TODO: pass post data to post.html template
 }
 
 func generateToken(user_id int) (string, error) {
@@ -327,13 +331,12 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	postTitle := r.FormValue("post-title")
 	postSlug := r.FormValue("post-slug")
 	// TODO: make this actually upload a Post type using the driver.Value interface
-	result, err := db.Exec(
+	_, err = db.Exec(
 		"INSERT INTO post (user_id, title, slug, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?);",
 		user_id, postTitle, postSlug, postContent, time.Now(), time.Now())
 	if err != nil {
 		http.Error(w, "Error creating post", http.StatusInternalServerError)
 	}
-	// TODO: add redirect to page for created post
-	id, err := result.LastInsertId()
-	w.Write([]byte(fmt.Sprintf("created row with id %d", id)))
+	w.Header().Set("Location", fmt.Sprintf("/posts/%s", postSlug))
+	w.WriteHeader(http.StatusSeeOther)
 }
