@@ -38,6 +38,8 @@ func initialize(*sql.DB) error {
 		title TEXT,
 		slug TEXT,
 		content TEXT,
+		created_at TIMESTAMP,
+		updated_at TIMESTAMP,
 		FOREIGN KEY(user_id) REFERENCES user(id)
 	);
 	`
