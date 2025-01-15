@@ -3,20 +3,18 @@ package main
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"fmt"
 	"html/template"
 	"io"
 	"net/http"
-	"personal-site/config"
-	"personal-site/html"
-	"personal-site/utils/markdown"
+	"personal-site/internal/config"
+	"personal-site/internal/db"
+	"personal-site/pkg/utils/markdown"
+	"personal-site/web/static/html"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
-	"log"
 
 	"github.com/aarol/reload"
 	"github.com/go-chi/chi/v5"
@@ -25,20 +23,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var db *sql.DB
-
 type Template struct {
 	Content template.HTML `json:"content"`
-}
-
-type Post struct {
-	id         int
-	user_id    int
-	title      string
-	slug       string
-	contents   string
-	created_at time.Time
-	updated_at time.Time
 }
 
 type key int
@@ -52,6 +38,7 @@ const (
 
 func main() {
 	r := chi.NewRouter()
+	defer db.DB.Close()
 	r.Use(middleware.Logger)    // log start and end of each request
 	r.Use(middleware.RequestID) // add unique id to each request context
 	r.Use(middleware.Recoverer) // recover and log from panic, return 500
@@ -61,7 +48,7 @@ func main() {
 
 	if config.IsDev {
 		// list of directories to recursively watch
-		reloader := reload.New("html/", "css/", "assets/")
+		reloader := reload.New("web/static/html/", "web/static/css/", "web/static/assets/")
 		handler = reloader.Handle(handler)
 		r.Handle("/css/*", http.StripPrefix("/css/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "no-store, must-revalidate")
@@ -69,17 +56,10 @@ func main() {
 		})))
 	}
 
-	db, err := Connect()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	pingErr := db.Ping()
-	if pingErr != nil {
-		log.Fatal(pingErr)
-	}
-	fmt.Println("Connected!")
+	// handle static assets
+	r.Route("/static", func(r chi.Router) {
+		r.Get("/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./web/static"))).ServeHTTP)
+	})
 
 	// protected routes
 	// TODO: proper 404 page
@@ -107,7 +87,7 @@ func main() {
 		r.Post("/login", HandleLogin)
 	})
 
-	err = http.ListenAndServe(config.Port, handler)
+	err := http.ListenAndServe(config.Port, handler)
 	if err != nil {
 		panic(err)
 	}
@@ -117,7 +97,7 @@ func main() {
 // middleware to add post to context, throw 404 if not found
 func PostCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var post *Post
+		var post *db.Post
 		var err error
 
 		if postID := chi.URLParam(r, "postID"); postID != "" {
@@ -126,9 +106,9 @@ func PostCtx(next http.Handler) http.Handler {
 				http.Error(w, "Invalid post ID", http.StatusBadRequest)
 				return
 			}
-			post, err = dbGetPost(postIdInt)
+			post, err = db.GetPost(postIdInt)
 		} else if postSlug := chi.URLParam(r, "postSlug"); postSlug != "" {
-			post, err = dbGetPostBySlug(postSlug)
+			post, err = db.GetPostBySlug(postSlug)
 		} else {
 			// TODO: return a 404
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -165,12 +145,12 @@ func GetNewPost(w http.ResponseWriter, r *http.Request) {
 
 func GetPost(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	post, ok := ctx.Value(postKey).(*Post)
+	post, ok := ctx.Value(postKey).(*db.Post)
 	if !ok {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 		return
 	}
-	w.Write([]byte(fmt.Sprintf("title:%s", post.title)))
+	w.Write([]byte(fmt.Sprintf("title:%s", post.Title)))
 	// TODO: pass post data to post.html template
 }
 
@@ -187,28 +167,6 @@ func generateToken(user_id int) (string, error) {
 	return s, nil
 }
 
-// TODO: move db functionality into db.go
-
-func dbGetPost(post_id int) (*Post, error) {
-	var post Post
-	row := db.QueryRow("SELECT * FROM post WHERE id = ?", post_id)
-	err := row.Scan(&post.id, &post.user_id, &post.title, &post.slug, &post.contents, &post.created_at, &post.updated_at)
-	if err != nil {
-		return nil, err
-	}
-	return &post, nil
-}
-
-func dbGetPostBySlug(slug string) (*Post, error) {
-	var post Post
-	row := db.QueryRow("SELECT * FROM post WHERE slug = ?", slug)
-	err := row.Scan(&post.id, &post.user_id, &post.title, &post.slug, &post.contents, &post.created_at, &post.updated_at)
-	if err != nil {
-		return nil, err
-	}
-	return &post, nil
-}
-
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// request validation
 	err := r.ParseForm()
@@ -216,25 +174,23 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	user, pass := r.FormValue("username"), r.FormValue("password")
-	if user == "" || pass == "" {
+	username, password := r.FormValue("username"), r.FormValue("password")
+	if username == "" || password == "" {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
 
-	var is_admin bool
-	var user_id int
-	// TODO: move db functionality into db.go
-	row := db.QueryRow("SELECT id, is_admin FROM user WHERE username = ? AND password = ?", user, pass)
-	err = row.Scan(&user_id, &is_admin)
-	if err == sql.ErrNoRows || !is_admin {
+	var user *db.User
+
+	user, err = db.GetUserByCreds(username, password)
+	if !user.IsAdmin {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	} else if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	jwt, err := generateToken(user_id)
+	jwt, err := generateToken(user.Id)
 	if err != nil {
 		w.Header().Set("Error", err.Error()) //TODO: better logging of errors in response body instead of header
 		http.Error(w, "Error generating JWT", http.StatusInternalServerError)
@@ -326,17 +282,16 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Could not verify identity from JWT", http.StatusBadRequest)
 	}
 	claims := token.Claims.(jwt.MapClaims)
-	user_id := int(claims["user_id"].(float64)) // user_id is a float64 in the map and not an int for some reason
-	postContent := r.FormValue("post-content")
-	postTitle := r.FormValue("post-title")
-	postSlug := r.FormValue("post-slug")
-	// TODO: make this actually upload a Post type using the driver.Value interface
-	_, err = db.Exec(
-		"INSERT INTO post (user_id, title, slug, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?);",
-		user_id, postTitle, postSlug, postContent, time.Now(), time.Now())
+	post := db.Post{
+		UserId:   int(claims["user_id"].(float64)), // user_id is a float64 in the map and not an int for some reason
+		Title:    r.FormValue("post-title"),
+		Slug:     r.FormValue("post-slug"),
+		Contents: r.FormValue("post-content"),
+	}
+	err = db.CreatePost(&post)
 	if err != nil {
 		http.Error(w, "Error creating post", http.StatusInternalServerError)
 	}
-	w.Header().Set("Location", fmt.Sprintf("/posts/%s", postSlug))
+	w.Header().Set("Location", fmt.Sprintf("/posts/%s", post.Slug))
 	w.WriteHeader(http.StatusSeeOther)
 }

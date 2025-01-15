@@ -14,6 +14,8 @@ var Addr string
 var Port string
 var SignKey []byte
 var TokenAuth *jwtauth.JWTAuth
+var AdminUser string
+var AdminPass string
 
 func init() {
 	if err := godotenv.Load(); err != nil {
@@ -24,4 +26,6 @@ func init() {
 	Port = fmt.Sprintf(":%s", os.Getenv("SERVER_PORT"))
 	SignKey = []byte(os.Getenv("SIGN_KEY"))
 	TokenAuth = jwtauth.New("HS256", SignKey, nil)
+	AdminUser = os.Getenv("ADMIN_USER")
+	AdminPass = os.Getenv("ADMIN_PASS")
 }

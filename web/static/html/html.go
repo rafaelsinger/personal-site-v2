@@ -4,7 +4,7 @@ import (
 	"embed"
 	"html/template"
 	"io"
-	"personal-site/config"
+	"personal-site/internal/config"
 )
 
 //go:embed *
@@ -14,7 +14,7 @@ func parse(file string) *template.Template {
 	if config.IsDev {
 		// dynamically read from files for dynamic template parsing
 		return template.Must(
-			template.New("layout.html").ParseFiles("html/layout.html", "html/"+file))
+			template.New("layout.html").ParseFiles("web/static/html/layout.html", "web/static/html/"+file))
 	} else {
 		// read from embedded file system in production
 		return template.Must(
