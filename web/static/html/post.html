@@ -1,0 +1,11 @@
+{{define "title"}}{{.Post.Title}}{{end}}
+
+{{define "content"}}
+<section class="post">
+    <h1 class="post-title">{{.Post.Title}}</h1>
+    <h3 class="post-date">{{.Time}}</h3>
+    <div class="post-contents">
+    {{.Post.Contents}}
+    </div>
+</section>
+{{end}}

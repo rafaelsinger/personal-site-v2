@@ -16,6 +16,7 @@ body {
     justify-content: center;
     height: 100vh;
     margin: 0;
+    line-height: 1.6;
     background-color: var(--bg-color);
     color: var(--font-color)
 }

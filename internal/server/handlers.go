@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"personal-site/internal/config"
@@ -36,6 +37,10 @@ func PostCtx(next http.Handler) http.Handler {
 				return
 			}
 			post, err = db.GetPost(postIdInt)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
 		} else if postSlug := chi.URLParam(r, "postSlug"); postSlug != "" {
 			post, err = db.GetPostBySlug(postSlug)
 		} else {
@@ -78,8 +83,7 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 		return
 	}
-	w.Write([]byte(fmt.Sprintf("title:%s", post.Title)))
-	// TODO: pass post data to post.html template
+	html.Post(w, post)
 }
 
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
@@ -187,7 +191,7 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		UserId:   int(claims["user_id"].(float64)), // user_id is a float64 in the map and not an int for some reason
 		Title:    r.FormValue("post-title"),
 		Slug:     r.FormValue("post-slug"),
-		Contents: r.FormValue("post-content"),
+		Contents: template.HTML(r.FormValue("post-content")),
 	}
 	err = db.CreatePost(&post)
 	if err != nil {

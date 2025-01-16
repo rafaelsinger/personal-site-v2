@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -27,12 +28,14 @@ func init() {
 
 func connect() error {
 	var err error
-	os.Remove("./db.sqlite")
-	DB, err = sql.Open("sqlite3", "./db.sqlite")
-	if err != nil {
-		return err
+	// if db exists, just connect, otherwise initialize
+	if _, err := os.Stat("./db.sqlite"); errors.Is(err, os.ErrNotExist) {
+		err = initialize(DB)
+		if err != nil {
+			return err
+		}
 	}
-	err = initialize(DB)
+	DB, err = sql.Open("sqlite3", "./db.sqlite")
 	if err != nil {
 		return err
 	}

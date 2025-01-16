@@ -1,0 +1,16 @@
+.post {
+    display: flex;
+    flex-direction: column;
+    width: 60vw;
+}
+
+.post-title {
+    font-size: 2rem;
+    margin-bottom: 0;
+}
+
+.post-date {
+    font-weight: normal;
+    font-style: italic;
+    margin-top: 8px;
+}

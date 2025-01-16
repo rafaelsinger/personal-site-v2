@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"personal-site/internal/config"
+	"strings"
 
 	"github.com/aarol/reload"
 	"github.com/go-chi/chi/v5"
@@ -26,13 +27,18 @@ func Start() {
 		handler = reloader.Handle(handler)
 		r.Handle("/css/*", http.StripPrefix("/css/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "no-store, must-revalidate")
-			http.FileServer(http.Dir("./css")).ServeHTTP(w, r)
+			http.FileServer(http.Dir("./web/static/css")).ServeHTTP(w, r)
 		})))
 	}
 
 	// handle static assets
 	r.Route("/static", func(r chi.Router) {
-		r.Get("/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./web/static"))).ServeHTTP)
+		r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.URL.Path, "css") && config.IsDev {
+				w.Header().Set("Cache-Control", "no-store, must-revalidate")
+			}
+			http.StripPrefix("/static/", http.FileServer(http.Dir("./web/static"))).ServeHTTP(w, r)
+		})
 	})
 
 	// protected routes
@@ -52,10 +58,9 @@ func Start() {
 	r.Group(func(r chi.Router) {
 		r.Get("/", GetHomePage)
 		r.Get("/login", GetLoginPage)
-		r.Route("/posts", func(r chi.Router) {
+		r.Route("/blog", func(r chi.Router) {
 			// TODO: add pagination (eventually)
 			// r.Get("/", GetAllPosts)
-			r.With(PostCtx).Get("/{postID}", GetPost)
 			r.With(PostCtx).Get("/{postSlug:[a-z-]+}", GetPost)
 		})
 		r.Post("/login", HandleLogin)

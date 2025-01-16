@@ -1,6 +1,9 @@
 package db
 
-import "time"
+import (
+	"html/template"
+	"time"
+)
 
 type User struct {
 	Id       int
@@ -14,7 +17,7 @@ type Post struct {
 	UserId    int
 	Title     string
 	Slug      string
-	Contents  string
+	Contents  template.HTML
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

@@ -5,10 +5,16 @@ import (
 	"html/template"
 	"io"
 	"personal-site/internal/config"
+	"personal-site/internal/db"
 )
 
 //go:embed *
 var files embed.FS
+
+type FormattedPost struct {
+	Post *db.Post
+	Time string
+}
 
 func parse(file string) *template.Template {
 	if config.IsDev {
@@ -36,4 +42,13 @@ func Admin(w io.Writer) error {
 
 func NewPost(w io.Writer) error {
 	return parse("new-post.html").Execute(w, "")
+}
+
+func Post(w io.Writer, post *db.Post) error {
+	// probably a better way to handle formatting the time but this works for now
+	formattedPost := FormattedPost{
+		post,
+		post.CreatedAt.Format("Monday, January 2, 2006"),
+	}
+	return parse("post.html").Execute(w, formattedPost)
 }
