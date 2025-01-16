@@ -39,6 +39,10 @@ func NewPost(w io.Writer) error {
 	return parse("new-post.html").Execute(w, "")
 }
 
+func Projects(w io.Writer) error {
+	return parse("projects.html").Execute(w, "")
+}
+
 func Post(w io.Writer, post *db.Post) error {
 	return parse("post.html").Execute(w, post)
 }

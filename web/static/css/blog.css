@@ -1,0 +1,13 @@
+.blog-entry {
+    display: flex;
+    align-items: center;
+    height: 35px;
+} 
+
+.blog-date {
+    margin-right: 12px;
+}
+
+.blog-search {
+    margin-top: 24px;
+}

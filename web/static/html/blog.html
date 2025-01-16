@@ -2,12 +2,13 @@
 
 {{define "content"}}
 <section class="blog">
-    <h1>Blog</h1>
+    <input class="blog-search" type="text" placeholder="Search...">
     {{if eq (len .) 0}}
         Nothing to see here
     {{end}}
     {{range .}}
-    <div>
+    <div class="blog-entry">
+        <p class="blog-date">{{.Published}}</p>
         <a href="/blog/{{.Slug}}">{{.Title}}</a>
     </div>
     {{end}}

@@ -58,6 +58,7 @@ func Start() {
 	r.Group(func(r chi.Router) {
 		r.Get("/", GetHomePage)
 		r.Get("/login", GetLoginPage)
+		r.Get("/projects", GetProjectsPage)
 		r.Route("/blog", func(r chi.Router) {
 			// TODO: add pagination (eventually)
 			r.Get("/", GetAllPosts)

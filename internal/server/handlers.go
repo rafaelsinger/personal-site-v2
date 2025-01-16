@@ -77,8 +77,15 @@ func GetNewPost(w http.ResponseWriter, r *http.Request) {
 	html.NewPost(w)
 }
 
+func GetProjectsPage(w http.ResponseWriter, r *http.Request) {
+	html.Projects(w)
+}
+
 func GetAllPosts(w http.ResponseWriter, r *http.Request) {
 	posts, err := db.GetAllPosts()
+	for _, post := range posts {
+		post.Published = post.CreatedAt.Format("Jan 2, 2006")
+	}
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 		return

@@ -87,7 +87,7 @@ func initialize(*sql.DB) error {
 }
 
 func GetAllPosts() ([]*Post, error) {
-	result, err := DB.Query("SELECT title, slug, published, content FROM post;")
+	result, err := DB.Query("SELECT title, slug, published, content, created_at FROM post ORDER BY created_at DESC;")
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +100,7 @@ func GetAllPosts() ([]*Post, error) {
 			&data.Slug,
 			&data.Published,
 			&data.Content,
+			&data.CreatedAt,
 		)
 		if err != nil {
 			return nil, err
