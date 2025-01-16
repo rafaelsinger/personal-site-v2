@@ -13,6 +13,7 @@ import (
 	"personal-site/pkg/utils/markdown"
 	"personal-site/web/static/html"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
@@ -74,6 +75,15 @@ func GetAdminPage(w http.ResponseWriter, r *http.Request) {
 
 func GetNewPost(w http.ResponseWriter, r *http.Request) {
 	html.NewPost(w)
+}
+
+func GetAllPosts(w http.ResponseWriter, r *http.Request) {
+	posts, err := db.GetAllPosts()
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
+	}
+	html.AllPosts(w, posts)
 }
 
 func GetPost(w http.ResponseWriter, r *http.Request) {
@@ -188,15 +198,16 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 	claims := token.Claims.(jwt.MapClaims)
 	post := db.Post{
-		UserId:   int(claims["user_id"].(float64)), // user_id is a float64 in the map and not an int for some reason
-		Title:    r.FormValue("post-title"),
-		Slug:     r.FormValue("post-slug"),
-		Contents: template.HTML(r.FormValue("post-content")),
+		UserId:    int(claims["user_id"].(float64)), // user_id is a float64 in the map and not an int for some reason
+		Title:     r.FormValue("post-title"),
+		Slug:      r.FormValue("post-slug"),
+		Content:   template.HTML(r.FormValue("post-content")),
+		Published: time.Now().Format("Monday, January 2, 2006"),
 	}
 	err = db.CreatePost(&post)
 	if err != nil {
 		http.Error(w, "Error creating post", http.StatusInternalServerError)
 	}
-	w.Header().Set("Location", fmt.Sprintf("/posts/%s", post.Slug))
+	w.Header().Set("Location", fmt.Sprintf("/blog/%s", post.Slug))
 	w.WriteHeader(http.StatusSeeOther)
 }

@@ -17,7 +17,8 @@ type Post struct {
 	UserId    int
 	Title     string
 	Slug      string
-	Contents  template.HTML
+	Content   template.HTML
+	Published string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

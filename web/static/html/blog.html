@@ -1,0 +1,15 @@
+{{define "title"}}Blog{{end}}
+
+{{define "content"}}
+<section class="blog">
+    <h1>Blog</h1>
+    {{if eq (len .) 0}}
+        Nothing to see here
+    {{end}}
+    {{range .}}
+    <div>
+        <a href="/blog/{{.Slug}}">{{.Title}}</a>
+    </div>
+    {{end}}
+</section>
+{{end}}

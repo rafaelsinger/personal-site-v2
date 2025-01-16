@@ -27,17 +27,21 @@ func init() {
 }
 
 func connect() error {
-	var err error
 	// if db exists, just connect, otherwise initialize
 	if _, err := os.Stat("./db.sqlite"); errors.Is(err, os.ErrNotExist) {
+		DB, err = sql.Open("sqlite3", "./db.sqlite")
+		if err != nil {
+			return err
+		}
 		err = initialize(DB)
 		if err != nil {
 			return err
 		}
-	}
-	DB, err = sql.Open("sqlite3", "./db.sqlite")
-	if err != nil {
-		return err
+	} else {
+		DB, err = sql.Open("sqlite3", "./db.sqlite")
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -58,6 +62,7 @@ func initialize(*sql.DB) error {
 		title TEXT,
 		slug TEXT,
 		content TEXT,
+		published TEXT,
 		created_at TIMESTAMP,
 		updated_at TIMESTAMP,
 		FOREIGN KEY(user_id) REFERENCES user(id)
@@ -81,10 +86,33 @@ func initialize(*sql.DB) error {
 	return nil
 }
 
+func GetAllPosts() ([]*Post, error) {
+	result, err := DB.Query("SELECT title, slug, published, content FROM post;")
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+	posts := make([]*Post, 0)
+	for result.Next() {
+		data := new(Post)
+		err = result.Scan(
+			&data.Title,
+			&data.Slug,
+			&data.Published,
+			&data.Content,
+		)
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, data)
+	}
+	return posts, nil
+}
+
 func GetPost(post_id int) (*Post, error) {
 	var post Post
 	row := DB.QueryRow("SELECT * FROM post WHERE id = ?", post_id)
-	err := row.Scan(&post.Id, &post.UserId, &post.Title, &post.Slug, &post.Contents, &post.CreatedAt, &post.UpdatedAt)
+	err := row.Scan(&post.Id, &post.UserId, &post.Title, &post.Slug, &post.Content, &post.Published, &post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +122,7 @@ func GetPost(post_id int) (*Post, error) {
 func GetPostBySlug(slug string) (*Post, error) {
 	var post Post
 	row := DB.QueryRow("SELECT * FROM post WHERE slug = ?", slug)
-	err := row.Scan(&post.Id, &post.UserId, &post.Title, &post.Slug, &post.Contents, &post.CreatedAt, &post.UpdatedAt)
+	err := row.Scan(&post.Id, &post.UserId, &post.Title, &post.Slug, &post.Content, &post.Published, &post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +141,8 @@ func GetUserByCreds(username string, password string) (*User, error) {
 
 func CreatePost(post *Post) error {
 	_, err := DB.Exec(
-		"INSERT INTO post (user_id, title, slug, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?);",
-		post.UserId, post.Title, post.Slug, post.Contents, time.Now(), time.Now())
+		"INSERT INTO post (user_id, title, slug, content, published, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?);",
+		post.UserId, post.Title, post.Slug, post.Content, post.Published, time.Now(), time.Now())
 	if err != nil {
 		return err
 	}

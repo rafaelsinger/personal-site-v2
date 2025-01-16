@@ -60,7 +60,7 @@ func Start() {
 		r.Get("/login", GetLoginPage)
 		r.Route("/blog", func(r chi.Router) {
 			// TODO: add pagination (eventually)
-			// r.Get("/", GetAllPosts)
+			r.Get("/", GetAllPosts)
 			r.With(PostCtx).Get("/{postSlug:[a-z-]+}", GetPost)
 		})
 		r.Post("/login", HandleLogin)

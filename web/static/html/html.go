@@ -11,11 +11,6 @@ import (
 //go:embed *
 var files embed.FS
 
-type FormattedPost struct {
-	Post *db.Post
-	Time string
-}
-
 func parse(file string) *template.Template {
 	if config.IsDev {
 		// dynamically read from files for dynamic template parsing
@@ -45,10 +40,9 @@ func NewPost(w io.Writer) error {
 }
 
 func Post(w io.Writer, post *db.Post) error {
-	// probably a better way to handle formatting the time but this works for now
-	formattedPost := FormattedPost{
-		post,
-		post.CreatedAt.Format("Monday, January 2, 2006"),
-	}
-	return parse("post.html").Execute(w, formattedPost)
+	return parse("post.html").Execute(w, post)
+}
+
+func AllPosts(w io.Writer, posts []*db.Post) error {
+	return parse("blog.html").Execute(w, posts)
 }
