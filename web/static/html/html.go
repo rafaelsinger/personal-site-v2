@@ -23,8 +23,8 @@ func parse(file string) *template.Template {
 	}
 }
 
-func Home(w io.Writer) error {
-	return parse("home.html").Execute(w, "")
+func Home(w io.Writer, posts []*db.Post) error {
+	return parse("home.html").Execute(w, posts)
 }
 
 func Login(w io.Writer) error {

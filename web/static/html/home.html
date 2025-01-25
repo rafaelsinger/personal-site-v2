@@ -22,5 +22,14 @@
         <li><a href="../assets/resume.pdf" download='Rafael Singer Resume'>Resumé</a></li>
         <li><a href="https://www.linkedin.com/in/rafael-singer-62566618b/" target="_blank">LinkedIn</a></li>
     </ul>
+    <p>Recent blog posts:</p>
+    {{if eq (len .) 0}}
+        Nothing to see here
+    {{end}}
+    {{range .}}
+    <ul class="blog-entry">
+        <li><a href="/blog/{{.Slug}}">{{.Title}}</a></li>
+    </ul>
+    {{end}}
 </div>
 {{end}}

@@ -62,7 +62,12 @@ func PostCtx(next http.Handler) http.Handler {
 }
 
 func GetHomePage(w http.ResponseWriter, r *http.Request) {
-	html.Home(w)
+	posts, err := db.GetAllPosts(db.WithLimit(3))
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
+	}
+	html.Home(w, posts)
 }
 
 func GetLoginPage(w http.ResponseWriter, r *http.Request) {

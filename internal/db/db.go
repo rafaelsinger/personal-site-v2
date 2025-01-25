@@ -7,12 +7,32 @@ import (
 	"log"
 	"os"
 	"personal-site/internal/config"
+	"reflect"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var DB *sql.DB
+
+type OrderDirection string
+
+const (
+	ASC  OrderDirection = "ASC"
+	DESC OrderDirection = "DESC"
+)
+
+func isValidOrderDirection(o OrderDirection) bool {
+	return o == ASC || o == DESC
+}
+
+type QueryOptions struct {
+	OrderByColumn    string
+	OrderByDirection OrderDirection
+	Limit            int
+}
+
+type Option func(*QueryOptions)
 
 func init() {
 	err := connect()
@@ -86,8 +106,38 @@ func initialize(*sql.DB) error {
 	return nil
 }
 
-func GetAllPosts() ([]*Post, error) {
-	result, err := DB.Query("SELECT title, slug, published, content, created_at FROM post ORDER BY created_at DESC;")
+func addQueryOptions(query *string, queryOptions *QueryOptions) {
+	v := reflect.ValueOf(*queryOptions)
+
+	orderByColumn := v.Field(0).String()
+	orderByDirection := OrderDirection(v.Field(1).String())
+	limit := v.Field(2).Int()
+
+	if orderByColumn != "" && orderByDirection != "" && isValidOrderDirection(orderByDirection) {
+		*query += fmt.Sprintf(" ORDER BY %s %s ", orderByColumn, orderByDirection)
+	} else if limit != 0 {
+		*query += fmt.Sprintf("LIMIT %d", limit)
+	}
+	*query += ";"
+}
+
+func WithLimit(limit int) Option {
+	return func(q *QueryOptions) {
+		q.Limit = limit
+	}
+}
+
+func GetAllPosts(options ...Option) ([]*Post, error) {
+	query := "SELECT title, slug, published, content, created_at FROM post"
+	queryOptions := &QueryOptions{
+		OrderByColumn:    "created_at",
+		OrderByDirection: DESC,
+	}
+	for _, opt := range options {
+		opt(queryOptions)
+	}
+	addQueryOptions(&query, queryOptions)
+	result, err := DB.Query(query)
 	if err != nil {
 		return nil, err
 	}
