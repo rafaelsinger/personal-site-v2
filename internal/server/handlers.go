@@ -117,6 +117,16 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 	html.Post(w, post)
 }
 
+func EditPost(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	post, ok := ctx.Value(postKey).(*db.Post)
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
+	}
+	html.Edit(w, post)
+}
+
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// request validation
 	err := r.ParseForm()
@@ -247,4 +257,32 @@ func HandleDeletePost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func HandleEditPost(w http.ResponseWriter, r *http.Request) {
+	if postID := chi.URLParam(r, "postID"); postID != "" {
+		postIdInt, err := strconv.Atoi(postID)
+		if err != nil {
+			http.Error(w, "Invalid post ID", http.StatusBadRequest)
+			return
+		}
+		err = r.ParseForm()
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		post := db.Post{
+			Title:     r.FormValue("post-title"),
+			Slug:      r.FormValue("post-slug"),
+			Content:   template.HTML(r.FormValue("post-content")),
+			UpdatedAt: time.Now(),
+		}
+		err = db.EditPost(postIdInt, &post)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	}
+	w.Header().Set("HX-Redirect", "/admin")
+	http.Redirect(w, r, "/admin", http.StatusOK)
 }

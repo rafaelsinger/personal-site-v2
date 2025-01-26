@@ -211,3 +211,12 @@ func DeletePost(postID int) error {
 	}
 	return nil
 }
+
+func EditPost(postID int, post *Post) error {
+	_, err := DB.Exec(
+		"UPDATE post SET title = ?, slug = ?, content = ?, updated_at = ? WHERE id = ?;", post.Title, post.Slug, post.Content, post.UpdatedAt, postID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -48,11 +48,13 @@ func Start() {
 		r.Use(jwtauth.Verifier(config.TokenAuth))
 		r.Use(jwtauth.Authenticator(config.TokenAuth))
 
+		// TODO: rework API to use the same name, differentiate through HTTP verb
 		r.Get("/admin", GetAdminPage)
 		r.Get("/new-post", GetNewPost)
 		r.Post("/upload-markdown", HandleUploadMarkdown)
 		r.Post("/create-post", HandleCreatePost)
 		r.Delete("/delete-post/{postID}", HandleDeletePost)
+		r.Patch("/post/{postID}", HandleEditPost)
 	})
 
 	// public routes
@@ -64,6 +66,7 @@ func Start() {
 			// TODO: add pagination (eventually)
 			r.Get("/", GetAllPosts)
 			r.With(PostCtx).Get("/{postSlug:[a-z-]+}", GetPost)
+			r.With(PostCtx).Get("/{postSlug:[a-z-]+}/edit", EditPost)
 		})
 		r.Post("/login", HandleLogin)
 	})

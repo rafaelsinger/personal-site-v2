@@ -1,0 +1,40 @@
+{{define "title"}}Edit Post{{end}}
+
+{{define "content"}}
+<section class="new-post">
+    <section class="post-text">
+        <div class="raw-container">
+            <h2 id="raw-post-title">Raw</h2>
+            <textarea class="raw-post" oninput={previewPostBody(this.value)} name="post-content" form="create-post-form">{{.Content}}</textarea>
+            <div class="post-details">
+                <div>
+                    <label for="post-title">Title</label>
+                    <input type="text" name="post-title" oninput={previewPostTitle(this.value)} form="create-post-form" value={{.Title}}>
+                </div>
+                <div>
+                    <label for="post-slug">Slug</label>
+                    <input type="text" name="post-slug" form="create-post-form" value={{.Slug}}>
+                </div>
+            </div>
+            <form class="create-post-container" id="create-post-form" hx-patch="/post/{{.Id}}">
+                <button type="submit">Edit Post</button>
+            </form>
+        </div>
+        <div class="preview-container">
+            <h2 id="preview-post-title">Preview</h2>
+            <h3 class="preview-title">{{.Title}}</h3>
+            <div class="preview-post">{{.Content}}</div>
+        </div>
+    </section>
+</section>
+<script>
+    const previewPostBodyElement = document.querySelector(".preview-post")
+    function previewPostBody(value) {
+        previewPostBodyElement.innerHTML = value
+    }
+    const previewPostTitleElement = document.querySelector(".preview-title")
+    function previewPostTitle(value) {
+        previewPostTitleElement.innerHTML = value
+    }
+</script>
+{{end}}
