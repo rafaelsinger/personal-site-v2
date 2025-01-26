@@ -75,7 +75,12 @@ func GetLoginPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAdminPage(w http.ResponseWriter, r *http.Request) {
-	html.Admin(w)
+	posts, err := db.GetAllPosts()
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
+	}
+	html.Admin(w, posts)
 }
 
 func GetNewPost(w http.ResponseWriter, r *http.Request) {
@@ -220,6 +225,22 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Error creating post", http.StatusInternalServerError)
 	}
-	w.Header().Set("Location", fmt.Sprintf("/blog/%s", post.Slug))
-	w.WriteHeader(http.StatusSeeOther)
+	w.Header().Set("HX-Redirect", "/admin")
+	http.Redirect(w, r, "/admin", http.StatusCreated)
+}
+
+func HandleDeletePost(w http.ResponseWriter, r *http.Request) {
+	if postID := chi.URLParam(r, "postID"); postID != "" {
+		postIdInt, err := strconv.Atoi(postID)
+		if err != nil {
+			http.Error(w, "Invalid post ID", http.StatusBadRequest)
+			return
+		}
+		err = db.DeletePost(postIdInt)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusOK)
 }

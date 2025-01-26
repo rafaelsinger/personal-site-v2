@@ -31,8 +31,8 @@ func Login(w io.Writer) error {
 	return parse("login.html").Execute(w, "")
 }
 
-func Admin(w io.Writer) error {
-	return parse("admin.html").Execute(w, "")
+func Admin(w io.Writer, posts []*db.Post) error {
+	return parse("admin.html").Execute(w, posts)
 }
 
 func NewPost(w io.Writer) error {

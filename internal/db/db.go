@@ -106,6 +106,7 @@ func initialize(*sql.DB) error {
 	return nil
 }
 
+// should make this more flexible in the future
 func addQueryOptions(query *string, queryOptions *QueryOptions) {
 	v := reflect.ValueOf(*queryOptions)
 
@@ -115,7 +116,8 @@ func addQueryOptions(query *string, queryOptions *QueryOptions) {
 
 	if orderByColumn != "" && orderByDirection != "" && isValidOrderDirection(orderByDirection) {
 		*query += fmt.Sprintf(" ORDER BY %s %s ", orderByColumn, orderByDirection)
-	} else if limit != 0 {
+	}
+	if limit != 0 {
 		*query += fmt.Sprintf("LIMIT %d", limit)
 	}
 	*query += ";"
@@ -128,7 +130,7 @@ func WithLimit(limit int) Option {
 }
 
 func GetAllPosts(options ...Option) ([]*Post, error) {
-	query := "SELECT title, slug, published, content, created_at FROM post"
+	query := "SELECT id, title, slug, published, content, created_at FROM post"
 	queryOptions := &QueryOptions{
 		OrderByColumn:    "created_at",
 		OrderByDirection: DESC,
@@ -146,6 +148,7 @@ func GetAllPosts(options ...Option) ([]*Post, error) {
 	for result.Next() {
 		data := new(Post)
 		err = result.Scan(
+			&data.Id,
 			&data.Title,
 			&data.Slug,
 			&data.Published,
@@ -194,6 +197,15 @@ func CreatePost(post *Post) error {
 	_, err := DB.Exec(
 		"INSERT INTO post (user_id, title, slug, content, published, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?);",
 		post.UserId, post.Title, post.Slug, post.Content, post.Published, time.Now(), time.Now())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeletePost(postID int) error {
+	_, err := DB.Exec(
+		"DELETE FROM post WHERE id = ?;", postID)
 	if err != nil {
 		return err
 	}

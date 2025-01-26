@@ -52,6 +52,7 @@ func Start() {
 		r.Get("/new-post", GetNewPost)
 		r.Post("/upload-markdown", HandleUploadMarkdown)
 		r.Post("/create-post", HandleCreatePost)
+		r.Delete("/delete-post/{postID}", HandleDeletePost)
 	})
 
 	// public routes

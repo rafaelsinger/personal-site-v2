@@ -4,6 +4,11 @@
     height: 35px;
 } 
 
+.blog-entry.htmx-swapping {
+    opacity: 0;
+    transition: opacity 1s ease-out;
+}
+
 .blog-date {
     margin-right: 12px;
 }
