@@ -74,8 +74,12 @@ func GetLoginPage(w http.ResponseWriter, r *http.Request) {
 	html.Login(w)
 }
 
+// TODO: standardize date formatting, this is inefficient
 func GetAdminPage(w http.ResponseWriter, r *http.Request) {
 	posts, err := db.GetAllPosts()
+	for _, post := range posts {
+		post.Published = post.CreatedAt.Format("01/02/06")
+	}
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 		return
