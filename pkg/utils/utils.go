@@ -77,3 +77,9 @@ func ParseTags(n *html.Node) []string {
 	traverse(n)
 	return tags
 }
+
+func CleanPostContent(content *string) {
+	contentParts := strings.Split(*content, "<hr>")
+	contentParts = contentParts[2:]
+	*content = strings.Join(contentParts, "")
+}

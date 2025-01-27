@@ -238,6 +238,7 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tags := utils.ParseTags(htmlContent)
+	utils.CleanPostContent(&content)
 	claims := token.Claims.(jwt.MapClaims)
 	post := db.Post{
 		UserId:    int(claims["user_id"].(float64)), // user_id is a float64 in the map and not an int for some reason
