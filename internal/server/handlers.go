@@ -13,10 +13,12 @@ import (
 	"personal-site/pkg/utils/markdown"
 	"personal-site/web/static/html"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
+	parsedHTML "golang.org/x/net/html"
 )
 
 type key int
@@ -219,6 +221,7 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("jwt")
 	if err != nil {
 		http.Error(w, "Error parsing JWT", http.StatusInternalServerError)
+		return
 	}
 	tokenString := cookie.Value
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -226,21 +229,35 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil || !token.Valid {
 		http.Error(w, "Could not verify identity from JWT", http.StatusBadRequest)
+		return
 	}
+	content := r.FormValue("post-content")
+	htmlContent, err := parsedHTML.Parse(strings.NewReader(content))
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	tags := utils.ParseTags(htmlContent)
 	claims := token.Claims.(jwt.MapClaims)
 	post := db.Post{
 		UserId:    int(claims["user_id"].(float64)), // user_id is a float64 in the map and not an int for some reason
 		Title:     r.FormValue("post-title"),
 		Slug:      r.FormValue("post-slug"),
-		Content:   template.HTML(r.FormValue("post-content")),
+		Content:   template.HTML(content),
 		Published: time.Now().Format("Monday, January 2, 2006"),
 	}
-	err = db.CreatePost(&post)
+	postID, err := db.CreatePost(&post)
 	if err != nil {
 		http.Error(w, "Error creating post", http.StatusInternalServerError)
+		return
+	}
+	err = db.CreateTags(postID, tags)
+	if err != nil {
+		http.Error(w, "Error creating post", http.StatusInternalServerError)
+		return
 	}
 	w.Header().Set("HX-Redirect", "/admin")
-	http.Redirect(w, r, "/admin", http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 }
 
 func HandleDeletePost(w http.ResponseWriter, r *http.Request) {
