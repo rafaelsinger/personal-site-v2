@@ -14,6 +14,8 @@
             <input type="text" name="post-title" oninput={previewPostTitle(this.value)} form="create-post-form">
             <label for="post-slug">Slug</label>
             <input type="text" name="post-slug" form="create-post-form">
+            <label for="tags">Tags</label>
+            <input type="text" name="tags" form="create-post-form">
             <form class="create-post-container" id="create-post-form" hx-post="/create-post">
                 <button type="submit">Create Post</button>
             </form>

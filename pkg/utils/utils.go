@@ -7,8 +7,15 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/net/html"
 )
+
+func Map[T any, U any](input []T, fn func(T) U) []U {
+	result := make([]U, len(input))
+	for i, v := range input {
+		result[i] = fn(v)
+	}
+	return result
+}
 
 func GenerateToken(user_id int) (string, error) {
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -37,49 +44,19 @@ func TitleToSlug(title string) string {
 	return slug
 }
 
-// thanks chat
-// ParseTags extracts <li> elements only within the <ul> that follows <p>tags:</p> and is between <hr> elements.
-func ParseTags(n *html.Node) []string {
-	var tags []string
-	var inTagsSection bool // Track whether we're inside the desired section
+func ParseTags(contents string) string {
+	tagsSection := strings.Split(contents, "---")[1]
+	tagsSection = strings.ReplaceAll(tagsSection, "\n", "")
+	tagsSection = strings.TrimPrefix(tagsSection, "tags:")
+	tagsParts := strings.Split(tagsSection, "- ")[1:]
+	tagsParts = Map(tagsParts, func(part string) string {
+		return strings.Trim(part, " ")
+	})
 
-	var traverse func(*html.Node)
-	traverse = func(n *html.Node) {
-		if n.Type == html.ElementNode {
-			// Check for <hr> to mark start/end of tags section
-			if n.Data == "hr" {
-				inTagsSection = !inTagsSection // Toggle state
-			}
-
-			// Detect <p> with the exact text "tags:"
-			if n.Data == "p" && inTagsSection && n.FirstChild != nil && strings.TrimSpace(n.FirstChild.Data) == "tags:" {
-				// Check if the next sibling is a <ul>
-				for sibling := n.NextSibling; sibling != nil; sibling = sibling.NextSibling {
-					if sibling.Type == html.ElementNode && sibling.Data == "ul" {
-						// Process <li> elements inside this <ul>
-						for child := sibling.FirstChild; child != nil; child = child.NextSibling {
-							if child.Type == html.ElementNode && child.Data == "li" && child.FirstChild != nil {
-								tags = append(tags, strings.TrimSpace(child.FirstChild.Data))
-							}
-						}
-						break // Only process the first <ul> found after <p>tags:</p>
-					}
-				}
-			}
-		}
-
-		// Traverse child nodes
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			traverse(c)
-		}
-	}
-
-	traverse(n)
-	return tags
+	return strings.Join(tagsParts, " ")
 }
-
 func CleanPostContent(content *string) {
-	contentParts := strings.Split(*content, "<hr>")
+	contentParts := strings.Split(*content, "---")
 	contentParts = contentParts[2:]
 	*content = strings.Join(contentParts, "")
 }

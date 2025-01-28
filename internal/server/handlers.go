@@ -18,7 +18,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
-	parsedHTML "golang.org/x/net/html"
 )
 
 type key int
@@ -188,6 +187,8 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// TODO: clean up this logic it is really messy and ugly and i hate it
+// TODO: ideally, when you edit the tags, it's reflected in the preview
 func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(32 << 20)
 	var buf bytes.Buffer
@@ -200,6 +201,8 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
 	contents := buf.String()
 	title := utils.FormatTitle(header.Filename)
 	slug := utils.TitleToSlug(title)
+	tags := utils.ParseTags(contents)
+	utils.CleanPostContent(&contents)
 	mk, err := markdown.ParseMD(contents)
 	if err != nil {
 		http.Error(w, "Error parsing markdown", http.StatusBadRequest)
@@ -216,6 +219,8 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
             <input type="text" name="post-title" value="%s" oninput={previewPostTitle(this.value)} form="create-post-form">
             <label for="post-slug">Slug</label>
             <input type="text" name="post-slug" value="%s" form="create-post-form">
+			<label for="tags">Tags</label>
+            <input type="text" name="tags" value="%s" form="create-post-form">
             <form class="create-post-container" id="create-post-form" method="post" action="/create-post">
                 <button type="submit">Create Post</button>
             </form>
@@ -225,7 +230,7 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
             <h3 class="preview-title">%s</h3>
             <div class="preview-post">%s</div>
         </div>
-	`, mk, title, slug, title, mk)
+	`, mk, title, slug, tags, title, mk)
 	w.Write([]byte(html))
 }
 
@@ -249,13 +254,7 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	content := r.FormValue("post-content")
-	htmlContent, err := parsedHTML.Parse(strings.NewReader(content))
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	tags := utils.ParseTags(htmlContent)
-	utils.CleanPostContent(&content)
+	tags := strings.Split(r.FormValue("tags"), " ")
 	claims := token.Claims.(jwt.MapClaims)
 	post := db.Post{
 		UserId:    int(claims["user_id"].(float64)), // user_id is a float64 in the map and not an int for some reason

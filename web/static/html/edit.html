@@ -15,6 +15,10 @@
                     <label for="post-slug">Slug</label>
                     <input type="text" name="post-slug" form="create-post-form" value={{.Slug}}>
                 </div>
+                <div>
+                    <label for="tags">Tags</label>
+                    <input type="text" name="tags" form="create-post-form">
+                </div>
             </div>
             <form class="create-post-container" id="create-post-form" hx-patch="/post/{{.Id}}">
                 <button type="submit">Edit Post</button>
