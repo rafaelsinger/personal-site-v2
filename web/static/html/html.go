@@ -43,8 +43,8 @@ func Projects(w io.Writer) error {
 	return parse("projects.html").Execute(w, "")
 }
 
-func Post(w io.Writer, post *db.Post) error {
-	return parse("post.html").Execute(w, post)
+func Post(w io.Writer, postData *db.PostData) error {
+	return parse("post.html").Execute(w, postData)
 }
 
 func Edit(w io.Writer, post *db.Post) error {

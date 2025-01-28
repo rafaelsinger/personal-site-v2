@@ -34,6 +34,11 @@ type QueryOptions struct {
 
 type Option func(*QueryOptions)
 
+type PostData struct {
+	Post *Post
+	Tags []*Tag
+}
+
 func init() {
 	err := connect()
 	if err != nil {
@@ -173,14 +178,38 @@ func GetAllPosts(options ...Option) ([]*Post, error) {
 	return posts, nil
 }
 
-func GetPost(post_id int) (*Post, error) {
+func GetPost(postID int) (*Post, error) {
 	var post Post
-	row := DB.QueryRow("SELECT * FROM post WHERE id = ?", post_id)
+	row := DB.QueryRow("SELECT * FROM post WHERE id = ?", postID)
 	err := row.Scan(&post.Id, &post.UserId, &post.Title, &post.Slug, &post.Content, &post.Published, &post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 	return &post, nil
+}
+
+// TODO: simplify into one query?
+func GetTags(postID int) ([]*Tag, error) {
+	var tags []*Tag
+	var tagIDs []int
+
+	res, err := DB.Query("SELECT tag_id FROM post_tags WHERE post_id = ?", postID)
+	if err != nil {
+		return nil, err
+	}
+	for res.Next() {
+		var tagID int
+		res.Scan(&tagID)
+		tagIDs = append(tagIDs, tagID)
+	}
+	res.Close()
+	for _, tagID := range tagIDs {
+		var tag Tag
+		row := DB.QueryRow("SELECT * FROM tag WHERE id = ?", tagID)
+		row.Scan(&tag.Id, &tag.Name)
+		tags = append(tags, &tag)
+	}
+	return tags, nil
 }
 
 func GetPostBySlug(slug string) (*Post, error) {

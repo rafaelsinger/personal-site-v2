@@ -25,12 +25,14 @@ type key int
 
 const (
 	postKey key = iota
+	tagsKey
 )
 
 // middleware to add post to context, throw 404 if not found
 func PostCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var post *db.Post
+		var tags []*db.Tag
 		var err error
 
 		if postID := chi.URLParam(r, "postID"); postID != "" {
@@ -46,6 +48,11 @@ func PostCtx(next http.Handler) http.Handler {
 			}
 		} else if postSlug := chi.URLParam(r, "postSlug"); postSlug != "" {
 			post, err = db.GetPostBySlug(postSlug)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+			tags, err = db.GetTags(post.Id)
 		} else {
 			// TODO: return a 404
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -59,6 +66,7 @@ func PostCtx(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), postKey, post)
+		ctx = context.WithValue(ctx, tagsKey, tags)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -116,7 +124,16 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 		return
 	}
-	html.Post(w, post)
+	tags, ok := ctx.Value(tagsKey).([]*db.Tag)
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
+	}
+	data := db.PostData{
+		Post: post,
+		Tags: tags,
+	}
+	html.Post(w, &data)
 }
 
 func EditPost(w http.ResponseWriter, r *http.Request) {

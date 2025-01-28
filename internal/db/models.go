@@ -22,3 +22,8 @@ type Post struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+type Tag struct {
+	Id   int
+	Name string
+}

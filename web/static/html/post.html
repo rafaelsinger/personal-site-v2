@@ -1,11 +1,16 @@
-{{define "title"}}{{.Title}}{{end}}
+{{define "title"}}{{.Post.Title}}{{end}}
 
 {{define "content"}}
 <section class="post">
-    <h1 class="post-title">{{.Title}}</h1>
-    <h3 class="post-date">{{.Published}}</h3>
+    <h1 class="post-title">{{.Post.Title}}</h1>
+    <h3 class="post-date">{{.Post.Published}}</h3>
+    <ul class="tags">
+        {{ range .Tags }}
+            <li>{{.}}</li>
+        {{end}}
+    </ul>
     <div class="post-contents">
-    {{.Content}}
+    {{.Post.Content}}
     </div>
 </section>
 {{end}}
