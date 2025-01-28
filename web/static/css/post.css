@@ -23,3 +23,15 @@
 .post-contents {
     font-size: 1.1rem;
 }
+
+.tags-list {
+    display: flex;
+}
+
+.tag {
+    margin-right: 0.5rem;
+}
+
+.tag:hover {
+    cursor: pointer;
+}

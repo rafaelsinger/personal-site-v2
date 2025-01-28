@@ -4,11 +4,12 @@
 <section class="post">
     <h1 class="post-title">{{.Post.Title}}</h1>
     <h3 class="post-date">{{.Post.Published}}</h3>
-    <ul class="tags">
+    <div class="tags-list">
         {{ range .Tags }}
-            <li>{{.}}</li>
+            <!-- TODO: add proper href when clicking on the tag -->
+            <a class="tag">#{{.Name}}</a>
         {{end}}
-    </ul>
+    </div>
     <div class="post-contents">
     {{.Post.Content}}
     </div>
