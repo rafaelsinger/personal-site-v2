@@ -188,27 +188,23 @@ func GetPost(postID int) (*Post, error) {
 	return &post, nil
 }
 
-// TODO: simplify into one query?
 func GetTags(postID int) ([]*Tag, error) {
 	var tags []*Tag
-	var tagIDs []int
 
-	res, err := DB.Query("SELECT tag_id FROM post_tags WHERE post_id = ?", postID)
+	res, err := DB.Query(
+		`SELECT tag.id, tag.name 
+		FROM tag 
+		INNER JOIN post_tags ON tag.id = post_tags.tag_id
+		WHERE post_tags.post_id = ?`, postID)
 	if err != nil {
 		return nil, err
 	}
 	for res.Next() {
-		var tagID int
-		res.Scan(&tagID)
-		tagIDs = append(tagIDs, tagID)
-	}
-	res.Close()
-	for _, tagID := range tagIDs {
 		var tag Tag
-		row := DB.QueryRow("SELECT * FROM tag WHERE id = ?", tagID)
-		row.Scan(&tag.Id, &tag.Name)
+		res.Scan(&tag.Id, &tag.Name)
 		tags = append(tags, &tag)
 	}
+	res.Close()
 	return tags, nil
 }
 
