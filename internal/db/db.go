@@ -8,6 +8,7 @@ import (
 	"os"
 	"personal-site/internal/config"
 	"reflect"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -161,19 +162,56 @@ func GetAllPosts(options ...Option) ([]*Post, error) {
 	defer result.Close()
 	posts := make([]*Post, 0)
 	for result.Next() {
-		data := new(Post)
-		err = result.Scan(
-			&data.Id,
-			&data.Title,
-			&data.Slug,
-			&data.Published,
-			&data.Content,
-			&data.CreatedAt,
-		)
+		post, err := createPost(result)
 		if err != nil {
 			return nil, err
 		}
-		posts = append(posts, data)
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
+func createPost(rows *sql.Rows) (*Post, error) {
+	post := new(Post)
+	err := rows.Scan(
+		&post.Id,
+		&post.Title,
+		&post.Slug,
+		&post.Published,
+		&post.Content,
+		&post.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return post, nil
+}
+
+func GetFilteredPosts(filters []string) ([]*Post, error) {
+	placeholders := strings.Repeat("?,", len(filters))
+	placeholders = placeholders[:len(placeholders)-1]
+	query := fmt.Sprintf(`
+		SELECT DISTINCT post.id, post.title, post.slug, post.published, post.content, post.created_at 
+		FROM post
+		INNER JOIN post_tags ON post.id = post_tags.post_id
+		INNER JOIN tag ON tag.id = post_tags.tag_id
+		WHERE tag.name IN (%s)
+	`, placeholders)
+	args := make([]interface{}, len(filters))
+	for i, filter := range filters {
+		args[i] = filter
+	}
+	rows, err := DB.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	posts := make([]*Post, 0)
+	for rows.Next() {
+		post, err := createPost(rows)
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
 	}
 	return posts, nil
 }

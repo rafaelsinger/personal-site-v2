@@ -103,9 +103,25 @@ func GetNewPost(w http.ResponseWriter, r *http.Request) {
 func GetProjectsPage(w http.ResponseWriter, r *http.Request) {
 	html.Projects(w)
 }
-
 func GetAllPosts(w http.ResponseWriter, r *http.Request) {
-	posts, err := db.GetAllPosts()
+	var tagFilters []string
+	var posts []*db.Post
+	var err error
+	params := r.URL.Query()
+	for key, val := range params {
+		if key == "q" {
+			tagFilters = val
+		}
+	}
+	if len(tagFilters) > 0 {
+		posts, err = db.GetFilteredPosts(tagFilters)
+	} else {
+		posts, err = db.GetAllPosts()
+	}
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
+	}
 	for _, post := range posts {
 		post.Published = post.CreatedAt.Format("Jan 2, 2006")
 	}
