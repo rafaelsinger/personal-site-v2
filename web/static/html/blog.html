@@ -2,7 +2,7 @@
 
 {{define "content"}}
 <section class="blog">
-    <input class="blog-search" type="text" placeholder="Search...">
+    <input class="blog-search" type="text" placeholder="Search..." oninput="handleSearch(this.value)">
     {{if gt (len .Filters) 0}}
     <div class="filters-container">
         <p class="filter-text">Filtering on:</p>
@@ -14,14 +14,23 @@
     {{if eq (len .Posts) 0}}
         No posts
     {{end}}
+    <div class="blog-entry-container">
     {{range .Posts}}
-    <div class="blog-entry">
-        <p class="blog-date">{{.Published}}</p>
-        <a href="/blog/{{.Slug}}">{{.Title}}</a>
+        <div class="blog-entry">
+            <p class="blog-date">{{.Published}}</p>
+            <a href="/blog/{{.Slug}}">{{.Title}}</a>
+        </div>
+        {{end}}
     </div>
-    {{end}}
-    <!-- TODO: decide between client side or server side searching -->
-    <!-- need some server side searching for tags (using query params ?q=TAG_NAME) -->
-    <!-- would be nice to have client side searching for all the blog posts, how to do this without javascript? -->
+     <script>
+         const allPosts = [...document.querySelectorAll('.blog-entry')]
+         const container = document.querySelector('.blog-entry-container')
+         const handleSearch = (value) => {
+            const filteredPosts = allPosts.filter((post) => post.children[1].innerText.toLowerCase().includes(value.toLowerCase())
+            )
+            container.innerHTML = ''
+            container.append(...filteredPosts)
+        }
+     </script>
 </section>
 {{end}}
