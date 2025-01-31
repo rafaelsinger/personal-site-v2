@@ -51,6 +51,6 @@ func Edit(w io.Writer, post *db.Post) error {
 	return parse("edit.html").Execute(w, post)
 }
 
-func AllPosts(w io.Writer, posts []*db.Post) error {
-	return parse("blog.html").Execute(w, posts)
+func AllPosts(w io.Writer, blogData *db.BlogData) error {
+	return parse("blog.html").Execute(w, blogData)
 }

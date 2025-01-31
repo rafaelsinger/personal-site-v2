@@ -20,3 +20,17 @@
 .edit-post {
     margin-left: auto;
 }
+
+.filters-container {
+    display: flex;
+    align-items: center;
+}
+
+.filter-text {
+    margin-right: 12px;
+    font-weight: bold;
+}
+
+.filter-item {
+    margin-right: 12px;
+}

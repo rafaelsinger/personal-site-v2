@@ -40,6 +40,11 @@ type PostData struct {
 	Tags []*Tag
 }
 
+type BlogData struct {
+	Posts   []*Post
+	Filters []string
+}
+
 func init() {
 	err := connect()
 	if err != nil {

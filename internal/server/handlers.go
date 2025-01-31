@@ -129,7 +129,11 @@ func GetAllPosts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 		return
 	}
-	html.AllPosts(w, posts)
+	blogData := db.BlogData{
+		Posts:   posts,
+		Filters: tagFilters,
+	}
+	html.AllPosts(w, &blogData)
 }
 
 func GetPost(w http.ResponseWriter, r *http.Request) {

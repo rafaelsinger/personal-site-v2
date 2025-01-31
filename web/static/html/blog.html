@@ -3,14 +3,25 @@
 {{define "content"}}
 <section class="blog">
     <input class="blog-search" type="text" placeholder="Search...">
-    {{if eq (len .) 0}}
-        Nothing to see here
+    {{if gt (len .Filters) 0}}
+    <div class="filters-container">
+        <p class="filter-text">Filtering on:</p>
+        {{range .Filters}}
+            <a class="filter-item" href="/blog?q={{.}}">#{{.}}</a>
+        {{end}}
+    </div>
     {{end}}
-    {{range .}}
+    {{if eq (len .Posts) 0}}
+        No posts
+    {{end}}
+    {{range .Posts}}
     <div class="blog-entry">
         <p class="blog-date">{{.Published}}</p>
         <a href="/blog/{{.Slug}}">{{.Title}}</a>
     </div>
     {{end}}
+    <!-- TODO: decide between client side or server side searching -->
+    <!-- need some server side searching for tags (using query params ?q=TAG_NAME) -->
+    <!-- would be nice to have client side searching for all the blog posts, how to do this without javascript? -->
 </section>
 {{end}}

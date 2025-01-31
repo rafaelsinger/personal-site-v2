@@ -6,8 +6,7 @@
     <h3 class="post-date">{{.Post.Published}}</h3>
     <div class="tags-list">
         {{ range .Tags }}
-            <!-- TODO: add proper href when clicking on the tag -->
-            <a class="tag">#{{.Name}}</a>
+            <a class="tag" href="/blog?q={{.Name}}">#{{.Name}}</a>
         {{end}}
     </div>
     <div class="post-contents">
