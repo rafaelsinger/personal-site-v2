@@ -34,3 +34,7 @@
 .filter-item {
     margin-right: 12px;
 }
+
+.reset-filters:hover {
+    text-decoration: none;
+}

@@ -5,10 +5,11 @@
     <input class="blog-search" type="text" placeholder="Search..." oninput="handleSearch(this.value)">
     {{if gt (len .Filters) 0}}
     <div class="filters-container">
-        <p class="filter-text">Filtering on:</p>
+        <p class="filter-text">Filtering for:</p>
         {{range .Filters}}
             <a class="filter-item" href="/blog?q={{.}}">#{{.}}</a>
         {{end}}
+        <a class='reset-filters' href="/blog">&times;</a>
     </div>
     {{end}}
     {{if eq (len .Posts) 0}}
