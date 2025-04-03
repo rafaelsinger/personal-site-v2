@@ -1,0 +1,7 @@
+{{define "title"}}Error{{end}}
+
+{{define "content"}}
+<section class="error">
+    <h1>Error {{.HTTPStatus}}: {{.Unwrap.Error}}</h1>
+</section>
+{{end}}

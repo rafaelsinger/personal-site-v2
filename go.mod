@@ -4,6 +4,8 @@ go 1.23.1
 
 require github.com/go-chi/jwtauth/v5 v5.3.2
 
+require github.com/pkg/errors v0.9.1 // indirect
+
 require (
 	github.com/aarol/reload v1.1.4 // indirect
 	github.com/bep/debounce v1.2.1 // indirect

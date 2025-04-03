@@ -3,12 +3,14 @@ package server
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"html/template"
 	"io"
 	"net/http"
 	"personal-site/internal/config"
 	"personal-site/internal/db"
+	"personal-site/internal/types"
 	"personal-site/pkg/utils"
 	"personal-site/pkg/utils/markdown"
 	"personal-site/web/static/html"
@@ -17,7 +19,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/pkg/errors"
 )
 
 type key int
@@ -37,30 +41,36 @@ func PostCtx(next http.Handler) http.Handler {
 		if postID := chi.URLParam(r, "postID"); postID != "" {
 			postIdInt, err := strconv.Atoi(postID)
 			if err != nil {
-				http.Error(w, "Invalid post ID", http.StatusBadRequest)
+				handleError(w, http.StatusBadRequest)
 				return
 			}
 			post, err = db.GetPost(postIdInt)
 			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				if err == sql.ErrNoRows {
+					handleError(w, http.StatusNotFound)
+				} else {
+					handleError(w, http.StatusInternalServerError)
+				}
 				return
 			}
 		} else if postSlug := chi.URLParam(r, "postSlug"); postSlug != "" {
 			post, err = db.GetPostBySlug(postSlug)
 			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				if err == sql.ErrNoRows {
+					handleError(w, http.StatusNotFound)
+				} else {
+					handleError(w, http.StatusInternalServerError)
+				}
 				return
 			}
 			tags, err = db.GetTags(post.Id)
 		} else {
-			// TODO: return a 404
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			handleError(w, http.StatusNotFound)
 			return
 		}
 
 		if err != nil {
-			// TODO: return a 404
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			handleError(w, http.StatusNotFound)
 			return
 		}
 
@@ -73,7 +83,7 @@ func PostCtx(next http.Handler) http.Handler {
 func GetHomePage(w http.ResponseWriter, r *http.Request) {
 	posts, err := db.GetAllPosts(db.WithLimit(3))
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		handleError(w, http.StatusUnprocessableEntity)
 		return
 	}
 	html.Home(w, posts)
@@ -83,6 +93,32 @@ func GetLoginPage(w http.ResponseWriter, r *http.Request) {
 	html.Login(w)
 }
 
+func HandleNotFound(w http.ResponseWriter, r *http.Request) {
+	handleError(w, http.StatusNotFound)
+}
+
+func CustomAuthenticator(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		hfn := func(w http.ResponseWriter, r *http.Request) {
+			token, _, err := jwtauth.FromContext(r.Context())
+
+			if err != nil {
+				handleError(w, http.StatusUnauthorized)
+				return
+			}
+
+			if token == nil {
+				handleError(w, http.StatusUnauthorized)
+				return
+			}
+
+			// Token is authenticated, pass it through
+			next.ServeHTTP(w, r)
+		}
+		return http.HandlerFunc(hfn)
+	}
+}
+
 // TODO: standardize date formatting, this is inefficient
 func GetAdminPage(w http.ResponseWriter, r *http.Request) {
 	posts, err := db.GetAllPosts()
@@ -90,7 +126,7 @@ func GetAdminPage(w http.ResponseWriter, r *http.Request) {
 		post.Published = post.CreatedAt.Format("01/02/06")
 	}
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		handleError(w, http.StatusUnprocessableEntity)
 		return
 	}
 	html.Admin(w, posts)
@@ -119,14 +155,14 @@ func GetAllPosts(w http.ResponseWriter, r *http.Request) {
 		posts, err = db.GetAllPosts()
 	}
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		handleError(w, http.StatusUnprocessableEntity)
 		return
 	}
 	for _, post := range posts {
 		post.Published = post.CreatedAt.Format("Jan 2, 2006")
 	}
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		handleError(w, http.StatusUnprocessableEntity)
 		return
 	}
 	blogData := db.BlogData{
@@ -140,12 +176,12 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	post, ok := ctx.Value(postKey).(*db.Post)
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		handleError(w, http.StatusUnprocessableEntity)
 		return
 	}
 	tags, ok := ctx.Value(tagsKey).([]*db.Tag)
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		handleError(w, http.StatusUnprocessableEntity)
 		return
 	}
 	data := db.PostData{
@@ -159,7 +195,7 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	post, ok := ctx.Value(postKey).(*db.Post)
 	if !ok {
-		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		handleError(w, http.StatusUnprocessableEntity)
 		return
 	}
 	html.Edit(w, post)
@@ -169,12 +205,12 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// request validation
 	err := r.ParseForm()
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		handleError(w, http.StatusBadRequest)
 		return
 	}
 	username, password := r.FormValue("username"), r.FormValue("password")
 	if username == "" || password == "" {
-		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		handleError(w, http.StatusBadRequest)
 		return
 	}
 
@@ -182,16 +218,15 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err = db.GetUserByCreds(username, password)
 	if !user.IsAdmin {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		handleError(w, http.StatusUnauthorized)
 		return
 	} else if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		handleError(w, http.StatusInternalServerError)
 		return
 	}
 	jwt, err := utils.GenerateToken(user.Id)
 	if err != nil {
-		w.Header().Set("Error", err.Error()) //TODO: better logging of errors in response body instead of header
-		http.Error(w, "Error generating JWT", http.StatusInternalServerError)
+		handleError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -214,7 +249,8 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	file, header, err := r.FormFile("markdown")
 	if err != nil {
-		http.Error(w, "Failed to retrieve file", http.StatusBadRequest)
+		handleError(w, http.StatusBadRequest)
+		return
 	}
 	defer file.Close()
 	io.Copy(&buf, file)
@@ -225,7 +261,8 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
 	utils.CleanPostContent(&contents)
 	mk, err := markdown.ParseMD(contents)
 	if err != nil {
-		http.Error(w, "Error parsing markdown", http.StatusBadRequest)
+		handleError(w, http.StatusBadRequest)
+		return
 	}
 	html := fmt.Sprintf(`
 		<div class="raw-container">
@@ -257,12 +294,12 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
 func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		handleError(w, http.StatusBadRequest)
 		return
 	}
 	cookie, err := r.Cookie("jwt")
 	if err != nil {
-		http.Error(w, "Error parsing JWT", http.StatusInternalServerError)
+		handleError(w, http.StatusInternalServerError)
 		return
 	}
 	tokenString := cookie.Value
@@ -270,7 +307,7 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		return []byte(config.SignKey), nil
 	})
 	if err != nil || !token.Valid {
-		http.Error(w, "Could not verify identity from JWT", http.StatusBadRequest)
+		handleError(w, http.StatusBadRequest)
 		return
 	}
 	content := r.FormValue("post-content")
@@ -285,12 +322,12 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 	postID, err := db.CreatePost(&post)
 	if err != nil {
-		http.Error(w, "Error creating post", http.StatusInternalServerError)
+		handleError(w, http.StatusInternalServerError)
 		return
 	}
 	err = db.CreateTags(postID, tags)
 	if err != nil {
-		http.Error(w, "Error creating post", http.StatusInternalServerError)
+		handleError(w, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("HX-Redirect", "/admin")
@@ -301,12 +338,12 @@ func HandleDeletePost(w http.ResponseWriter, r *http.Request) {
 	if postID := chi.URLParam(r, "postID"); postID != "" {
 		postIdInt, err := strconv.Atoi(postID)
 		if err != nil {
-			http.Error(w, "Invalid post ID", http.StatusBadRequest)
+			handleError(w, http.StatusBadRequest)
 			return
 		}
 		err = db.DeletePost(postIdInt)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			handleError(w, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -317,12 +354,12 @@ func HandleEditPost(w http.ResponseWriter, r *http.Request) {
 	if postID := chi.URLParam(r, "postID"); postID != "" {
 		postIdInt, err := strconv.Atoi(postID)
 		if err != nil {
-			http.Error(w, "Invalid post ID", http.StatusBadRequest)
+			handleError(w, http.StatusBadRequest)
 			return
 		}
 		err = r.ParseForm()
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			handleError(w, http.StatusBadRequest)
 			return
 		}
 		post := db.Post{
@@ -333,10 +370,27 @@ func HandleEditPost(w http.ResponseWriter, r *http.Request) {
 		}
 		err = db.EditPost(postIdInt, &post)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			handleError(w, http.StatusInternalServerError)
 			return
 		}
 	}
 	w.Header().Set("HX-Redirect", "/admin")
 	http.Redirect(w, r, "/admin", http.StatusOK)
+}
+
+func handleError(w http.ResponseWriter, statusCode int) {
+	var statusErr types.StatusError
+	switch statusCode {
+	case http.StatusNotFound:
+		statusErr = types.NewStatusError(errors.New(http.StatusText(http.StatusNotFound)), http.StatusNotFound)
+	case http.StatusBadRequest:
+		statusErr = types.NewStatusError(errors.New(http.StatusText(http.StatusBadRequest)), http.StatusBadRequest)
+	case http.StatusUnauthorized:
+		statusErr = types.NewStatusError(errors.New(http.StatusText(http.StatusUnauthorized)), http.StatusUnauthorized)
+	case http.StatusInternalServerError:
+		statusErr = types.NewStatusError(errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError)
+	case http.StatusUnprocessableEntity:
+		statusErr = types.NewStatusError(errors.New(http.StatusText(http.StatusUnprocessableEntity)), http.StatusUnprocessableEntity)
+	}
+	html.Error(w, statusErr)
 }

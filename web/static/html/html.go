@@ -6,6 +6,7 @@ import (
 	"io"
 	"personal-site/internal/config"
 	"personal-site/internal/db"
+	"personal-site/internal/types"
 )
 
 //go:embed *
@@ -25,6 +26,10 @@ func parse(file string) *template.Template {
 
 func Home(w io.Writer, posts []*db.Post) error {
 	return parse("home.html").Execute(w, posts)
+}
+
+func Error(w io.Writer, err types.StatusError) error {
+	return parse("error.html").Execute(w, err)
 }
 
 func Login(w io.Writer) error {

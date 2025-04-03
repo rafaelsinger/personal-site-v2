@@ -42,11 +42,9 @@ func Start() {
 	})
 
 	// protected routes
-	// TODO: proper 404 page
 	r.Group(func(r chi.Router) {
-		// TODO: proper Forbidden page when receiving 401
 		r.Use(jwtauth.Verifier(config.TokenAuth))
-		r.Use(jwtauth.Authenticator(config.TokenAuth))
+		r.Use(CustomAuthenticator(config.TokenAuth))
 
 		// TODO: rework API to use the same name, differentiate through HTTP verb
 		r.Get("/admin", GetAdminPage)
@@ -70,6 +68,8 @@ func Start() {
 		})
 		r.Post("/login", HandleLogin)
 	})
+
+	r.NotFound(HandleNotFound)
 
 	err := http.ListenAndServe(config.Port, handler)
 	if err != nil {
