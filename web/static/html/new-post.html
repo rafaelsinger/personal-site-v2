@@ -6,7 +6,7 @@
         <div class="raw-container">
             <h2 id="raw-post-title">Raw</h2>
             <textarea class="raw-post" oninput={previewPostBody(this.value)} name="post-content" form="create-post-form"></textarea>
-            <form class="upload-markdown-container" enctype="multipart/form-data" hx-post="/upload-markdown" hx-target=".post-text" hx-swap="innerHTML">
+            <form class="upload-markdown-container" enctype="multipart/form-data" hx-post="/markdown" hx-target=".post-text" hx-swap="innerHTML">
                 <input type="file" name="markdown">
                 <input type="submit" value="Upload Markdown"></button>
             </form>
@@ -16,7 +16,7 @@
             <input type="text" name="post-slug" form="create-post-form">
             <label for="tags">Tags</label>
             <input type="text" name="tags" form="create-post-form">
-            <form class="create-post-container" id="create-post-form" hx-post="/create-post">
+            <form class="create-post-container" id="create-post-form" hx-post="/post">
                 <button type="submit">Create Post</button>
             </form>
         </div>

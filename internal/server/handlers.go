@@ -268,7 +268,7 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
 		<div class="raw-container">
             <h2 id="raw-post-title">Raw</h2>
             <textarea class="raw-post" oninput={previewPostBody(this.value)} name="post-content" form="create-post-form">%s</textarea>
-            <form class="upload-markdown-container" enctype="multipart/form-data" hx-post="/upload-markdown" hx-target=".raw-post" hx-swap="innerHTML">
+            <form class="upload-markdown-container" enctype="multipart/form-data" hx-post="/markdown" hx-target=".raw-post" hx-swap="innerHTML">
                 <input type="file" name="markdown">
                 <input type="submit" value="Upload Markdown"></button>
             </form>
@@ -278,7 +278,7 @@ func HandleUploadMarkdown(w http.ResponseWriter, r *http.Request) {
             <input type="text" name="post-slug" value="%s" form="create-post-form">
 			<label for="tags">Tags</label>
             <input type="text" name="tags" value="%s" form="create-post-form">
-            <form class="create-post-container" id="create-post-form" method="post" action="/create-post">
+            <form class="create-post-container" id="create-post-form" method="post" action="/post">
                 <button type="submit">Create Post</button>
             </form>
         </div>

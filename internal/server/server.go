@@ -48,11 +48,12 @@ func Start() {
 
 		// TODO: rework API to use the same name, differentiate through HTTP verb
 		r.Get("/admin", GetAdminPage)
-		r.Get("/new-post", GetNewPost)
-		r.Post("/upload-markdown", HandleUploadMarkdown)
-		r.Post("/create-post", HandleCreatePost)
-		r.Delete("/delete-post/{postID}", HandleDeletePost)
+		r.Get("/post", GetNewPost)
+		r.Post("/post", HandleCreatePost)
+		r.Delete("/post/{postID}", HandleDeletePost)
 		r.Patch("/post/{postID}", HandleEditPost)
+
+		r.Post("/markdown", HandleUploadMarkdown)
 	})
 
 	// public routes
